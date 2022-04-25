@@ -37,6 +37,46 @@ router.get('/', (req, res) => {
     }
 })
 
+router.get('/detallePersonaje/:id', (req, res) => {
+    let id = req.params.id;
+    const token = req.headers['x-access-token'];
+    if (!token) {
+        res.status(401).send({ error: "Es necesario el token de autenticación" })
+    } else {
+        JWT.verify(token, secret, async (error, user) => {
+            if (error) {
+                return res.json({ message: 'token invalido' });
+            } else {
+                try {
+                    let consultaDetalle = `SELECT a.idPersonaje, a.imagen, a.nombre, a.edad, a.peso, a.historia, b.titulo 
+                    FROM personajes a
+                    JOIN peliculaspersonajes c ON a.idPersonaje = c.idPersonaje
+                    JOIN peliculasseries b ON c.idPeliculaSerie =  b.idPeliculaSerie
+                    WHERE a.idPersonaje = ?;`
+                    let peliculas = [];
+                    let detalle = await query(consultaDetalle, [id]);
+                    for (let i = 0; i < detalle.length; i++) {
+                        let pelicula = detalle[i].titulo;
+                        peliculas.push(pelicula);                        
+                    }
+                    let response = {
+                        "nombre" : detalle[0].nombre,
+                        "edad" : detalle[0].edad,
+                        "peso" : detalle[0].peso,
+                        "historia": detalle[0].historia,
+                        "peliculas" : peliculas
+                    }
+                    console.log(response);
+                    res.send(response);
+                } catch (error) {
+                    res.send(error);
+                    console.log(error);
+                }
+            }
+        })
+    }
+})
+
 router.post('/crearPersonaje', [multer.single('imagen')], (req, res) => {
     let file = req.file;
     let personaje = req.body;
