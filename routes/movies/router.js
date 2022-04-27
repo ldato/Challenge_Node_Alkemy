@@ -13,32 +13,148 @@ const query = util.promisify(connectionSQL.query).bind(connectionSQL); //para us
 router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
 
-router.get('/', (req, res) => {
+//----------------------------------------ORIGINAL--------------------------------------------------------
+// router.get('/', (req, res) => {
+//     const token = req.headers['x-access-token'];
+//     if (!token) {
+//         res.status(401).send({ error: "Es necesario el token de autenticación" });
+//     } else {
+//         JWT.verify(token, secret, (error, user) => {
+//             if (error) {
+//                 return res.json({ message: "Token invalido" });
+//             } else {
+//                 try {
+//                     const connection = mysql.createConnection(dbConfig);
+//                     connection.query('SELECT imagen, titulo, fechaCreacion FROM peliculasseries;',
+//                         function (error, result) {
+//                             if (error) {
+//                                 throw error;
+//                             } else {
+//                                 console.log(result);
+//                                 res.send(result);
+//                             }
+//                         })
+//                 } catch (error) {
+//                     res.send(error);
+//                 }
+//             }
+//         })
+//     }
+// })
+//---------------------------------------------------------------------------------------------------------------
+router.get('/', async (req, res) => {
+    let titulo = req.query.name;
+    let genero = parseInt(req.query.genre);
+    let order = "ORDER BY a.titulo ASC";
+    let consulta = "";
+    let parametros = [];
+    let condicion = "";
+    let orden = "";
     const token = req.headers['x-access-token'];
     if (!token) {
         res.status(401).send({ error: "Es necesario el token de autenticación" });
     } else {
-        JWT.verify(token, secret, (error, user) => {
+        JWT.verify(token, secret, async (error, user) => {
             if (error) {
                 return res.json({ message: "Token invalido" });
             } else {
                 try {
-                    const connection = mysql.createConnection(dbConfig);
-                    connection.query('SELECT imagen, titulo, fechaCreacion FROM peliculasseries;',
-                        function (error, result) {
-                            if (error) {
-                                throw error;
-                            } else {
-                                console.log(result);
-                                res.send(result);
-                            }
-                        })
+                    let querySinCondicion = `SELECT a.idPeliculaSerie, a.imagen, a.titulo, a.fechaCreacion, a.calificacion, c.nombre AS genero, d.nombre AS personaje
+                    FROM peliculasseries a 
+                    JOIN generos c ON a.idGenero = c.idGenero
+                    JOIN peliculaspersonajes b ON a.idPeliculaSerie = b.idPeliculaSerie
+                    JOIN personajes d ON b.idPersonaje = d.idPersonaje `;
+                    let queryNombreCondicion = `SELECT a.idPeliculaSerie, a.imagen, a.titulo, a.fechaCreacion, a.calificacion, c.nombre AS genero, d.nombre AS personaje
+                    FROM peliculasseries a 
+                    JOIN generos c ON a.idGenero = c.idGenero
+                    JOIN peliculaspersonajes b ON a.idPeliculaSerie = b.idPeliculaSerie
+                    JOIN personajes d ON b.idPersonaje = d.idPersonaje 
+                    WHERE a.titulo LIKE ? `;
+                    let queryConCondicion = `SELECT a.idPeliculaSerie, a.imagen, a.titulo, a.fechaCreacion, a.calificacion, c.nombre AS genero, d.nombre AS personaje
+                    FROM peliculasseries a 
+                    JOIN generos c ON a.idGenero = c.idGenero
+                    JOIN peliculaspersonajes b ON a.idPeliculaSerie = b.idPeliculaSerie
+                    JOIN personajes d ON b.idPersonaje = d.idPersonaje WHERE c.idGenero = ? `;
+                    if ((req.query.name === undefined || req.query.name === "") && (req.query.genre === undefined || req.query.genre === "") && (req.query.order === undefined || req.query.order === "")) {
+                        consulta = querySinCondicion;
+                    } else {                        
+                        if ((req.query.name !== undefined || req.query.name !== "") && (req.query.genre === undefined || req.query.genre === "") && (req.query.order === undefined || req.query.order === "")) {
+                            consulta = queryNombreCondicion;
+                            parametros.push(titulo);
+                        }
+                        if ((req.query.name === undefined || req.query.name === "") && (req.query.genre !== undefined || req.query.genre !== "") && (req.query.order === undefined || req.query.order === "")) {
+                            consulta = queryConCondicion;
+                            //condicion = "c.idGenero = ? ";
+                            parametros.push(genero);
+                        }
+                        if ((req.query.name === undefined || req.query.name === "") && (req.query.genre === undefined || req.query.genre === "") && (req.query.order !== undefined || req.query.order !== "")) {
+                            consulta = querySinCondicion;
+                            order ="ORDER BY a.titulo DESC"
+                        }
+                    }
+                    let consultaFinal = consulta + order;
+                    let response = await query(consultaFinal, parametros)
+                    res.send(response);
+                    console.log(response);
+                    console.log(consultaFinal);
                 } catch (error) {
-
+                    res.send(error);
                 }
             }
         })
     }
+})
+
+
+
+//MEDIANTE ESTE ENDPOINT SE BUSCA POR TITULO, SE FILTRA POR GENERO Y SE ORDENA DE MANERA ASCENDENTE O DESCENDENTE
+router.get('/queryParameters/:titulo', async (req, res) => {
+    let titulo = req.params.titulo;
+    let genero = parseInt(req.query.idGenero);
+    let orden = req.query.order;
+    let parametros = [titulo];
+    let condicion = "";
+    let order = "ORDER BY a.titulo ASC"
+    let consulta = "";
+    let querySinCondicion = `SELECT a.idPeliculaSerie, a.imagen, a.titulo, a.fechaCreacion, a.calificacion, c.nombre AS genero, d.nombre AS personaje
+    FROM peliculasseries a 
+    JOIN generos c ON a.idGenero = c.idGenero
+    JOIN peliculaspersonajes b ON a.idPeliculaSerie = b.idPeliculaSerie
+    JOIN personajes d ON b.idPersonaje = d.idPersonaje
+    WHERE a.titulo LIKE ?`;
+    let queryConCondicion = `SELECT a.idPeliculaSerie, a.imagen, a.titulo, a.fechaCreacion, a.calificacion, c.nombre AS genero, d.nombre AS personaje
+    FROM peliculasseries a 
+    JOIN generos c ON a.idGenero = c.idGenero
+    JOIN peliculaspersonajes b ON a.idPeliculaSerie = b.idPeliculaSerie
+    JOIN personajes d ON b.idPersonaje = d.idPersonaje 
+    WHERE a.titulo LIKE ? `;
+
+    if ((req.query.idGenero === undefined || req.query.idGenero === "") && (req.query.order === undefined || req.query === "")) {
+        consulta = querySinCondicion;
+    } else {
+        consulta = queryConCondicion;
+        if ((req.query.idGenero !== undefined || req.query.idGenero !== "") && (req.query.orden === undefined || req.query.orden === "")) {
+            condicion = " AND c.idGenero = ? ";
+            parametros.push(genero);
+        }
+        if ((req.query.idGenero === undefined || req.query.idGenero === "") && (req.query.orden !== undefined || req.query.orden !== "")) {
+            condicion = "";
+            orden = "ORDER BY a.titulo DESC";
+            // parametros.push(orden);
+        }
+        if ((req.query.idGenero !== undefined || req.query.idGenero !== "") && (req.query.orden !== undefined || req.query.orden !== "")) {
+            condicion = "AND c.idGenero = ? ";
+            parametros.push(genero);
+            orden = "ORDER BY a.titulo DESC";
+            // parametros.push(orden);
+        }
+    }
+    let consultaFinal = consulta + condicion + order;
+    let response = await query(consultaFinal, parametros);
+    console.log(consultaFinal);
+    console.log(response);
+    res.send(response);
+
 })
 
 router.post('/crearPelicula', [multer.single('imagen')], (req, res) => {
@@ -90,17 +206,16 @@ router.post('/crearPelicula', [multer.single('imagen')], (req, res) => {
 
                             for (let i = 0; i < personajesCargados.length; i++) {
                                 let item = personajesCargados[i];
-                                //console.log(item[0].idPersonaje);  
                                 await query(insertAsociacion, [item[0].idPersonaje, id]);
                             }
                             res.send("Se ha insertado la pelicula con sus personajes");
                         } else {
                             res.send('Se deden cargar los siguientes personajes para asociar: ' + personajesCargar + ' para asociar a la pelicula');
                             console.log('Se deden cargar los siguientes personajes para asociar: ' + personajesCargar + ' para asociar a la pelicula');
-                            console.log("A Cargar");
-                            console.log(personajesCargar);
-                            console.log("Cargados");
-                            console.log(personajesCargados);
+                            // console.log("A Cargar");
+                            // console.log(personajesCargar);
+                            // console.log("Cargados");
+                            // console.log(personajesCargados);
                         }
                     } catch (error) {
                         res.send(error);
@@ -169,8 +284,8 @@ router.put('/modificarPelicula/:id', (req, res) => {
                     let nvaInfoArray = [
                         titulo = nvaInformacion.titulo === undefined ? pelicula[0].titulo : nvaInformacion.titulo,
                         fechaCreacion = pelicula[0].fechaCreacion,
-                        calificacion = nvaInformacion.calificacion ===undefined ? pelicula[0].calificacion:nvaInformacion.calificacion,
-                        idGenero = nvaInformacion.idGenero ===undefined ? pelicula[0].idGenero :nvaInformacion.idGenero,
+                        calificacion = nvaInformacion.calificacion === undefined ? pelicula[0].calificacion : nvaInformacion.calificacion,
+                        idGenero = nvaInformacion.idGenero === undefined ? pelicula[0].idGenero : nvaInformacion.idGenero,
                         id = id
                     ];
                     let consultaModif = `UPDATE peliculasseries SET titulo = ?, fechaCreacion = ?,

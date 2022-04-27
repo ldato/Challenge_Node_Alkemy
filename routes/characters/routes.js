@@ -13,7 +13,38 @@ const query = util.promisify(connectionSQL.query).bind(connectionSQL);
 router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
 
+//--------------------------------ORIGINAL--------------------------------------------------------------
+// router.get('/', (req, res) => {
+//     const token = req.headers['x-access-token'];
+//     if (!token) {
+//         res.status(401).send({ error: "Es necesario el token de autenticación" })
+//     } else {
+//         JWT.verify(token, secret, async (error, user) => {
+//             if (error) {
+//                 return res.json({ message: 'token invalido' });
+//             } else {
+//                 try {
+//                     const connection = mysql.createConnection(dbConfig);
+//                     connection.query('SELECT nombre, imagen FROM personajes', function (error, result) {
+//                         res.send(result);
+//                         console.log(result);
+//                     })
+//                 } catch (error) {
+//                     res.send(error);
+//                     console.log(error);
+//                 }
+//             }
+//         })
+//     }
+// })
+//----------------------------------------------------------------------------------------------------------
+
 router.get('/', (req, res) => {
+    let nombre = req.query.name;
+    let edad = parseInt(req.query.age);
+    let movies = parseInt(req.query.idMovie);
+    let consulta = "";
+    let parametro = [];
     const token = req.headers['x-access-token'];
     if (!token) {
         res.status(401).send({ error: "Es necesario el token de autenticación" })
@@ -23,11 +54,37 @@ router.get('/', (req, res) => {
                 return res.json({ message: 'token invalido' });
             } else {
                 try {
-                    const connection = mysql.createConnection(dbConfig);
-                    connection.query('SELECT nombre, imagen FROM personajes', function (error, result) {
-                        res.send(result);
-                        console.log(result);
-                    })
+                    let querySinParametros = `SELECT a.idPersonaje, a.imagen, a.nombre, a.edad, a.peso, a.historia, b.titulo 
+                    FROM personajes a
+                    JOIN peliculaspersonajes c ON a.idPersonaje = c.idPersonaje
+                    JOIN peliculasseries b ON c.idPeliculaSerie =  b.idPeliculaSerie`;
+                    let queryConParametros = `SELECT a.idPersonaje, a.imagen, a.nombre, a.edad, a.peso, a.historia, b.titulo 
+                    FROM personajes a
+                    JOIN peliculaspersonajes c ON a.idPersonaje = c.idPersonaje
+                    JOIN peliculasseries b ON c.idPeliculaSerie =  b.idPeliculaSerie WHERE `;
+                    let condicionWhere = ""
+                    if ((req.query.name === undefined || req.query.name === "") && (req.query.age === undefined || req.query.age === "") && (req.query.idMovie === undefined || req.query.idMovie === "")) {
+                        consulta = querySinParametros;
+                    } else {
+                        consulta = queryConParametros;
+                        if ((req.query.name !== undefined || req.query.name !== "") && (req.query.age === undefined || req.query.age === "") && (req.query.idMovie === undefined || req.query.idMovie === "")) {
+                            condicionWhere = "a.nombre LIKE ?";
+                            parametro.push(nombre);
+                        }
+                        if ((req.query.name === undefined || req.query.name === "") && (req.query.age !== undefined || req.query.age !== "") && (req.query.idMovie === undefined || req.query.idMovie === "")) {
+                            condicionWhere = "a.edad = ?";
+                            parametro.push(edad);
+                        }
+                        if ((req.query.name === undefined || req.query.name === "") && (req.query.age === undefined || req.query.age === "") && (req.query.idMovie !== undefined || req.query.idMovie !== "")) {
+                            condicionWhere = " b.idPeliculaSerie = ?";
+                            parametro.push(movies);
+                        }
+                    }
+                    let consultaFinal = consulta + condicionWhere;
+                    let response = await query(consultaFinal, parametro);
+                    console.log(response);
+                    res.send(response);
+
                 } catch (error) {
                     res.send(error);
                     console.log(error);
@@ -38,7 +95,7 @@ router.get('/', (req, res) => {
 })
 
 
-//ESTE ENDPOINT TRATA DE SEGUIR LA CONSIGNA, DE BUSCAR POR NOMBRE Y LUEGO APLICAR LOS FILTROS DE NOMBRE Y PELICULA
+//ESTE ENDPOINT TRATA DE SEGUIR LA CONSIGNA DE BUSCAR POR NOMBRE Y LUEGO APLICAR LOS FILTROS DE EDAD Y PELICULA
 router.get('/queryParameters/:nombre', async (req, res) => {
     let nombre = req.params.nombre;
     let edad = parseInt(req.query.edad);
@@ -80,9 +137,6 @@ router.get('/queryParameters/:nombre', async (req, res) => {
 
     console.log(consultaFinal, parametros);
 })
-
-
-
 
 
 router.get('/detallePersonaje/:id', (req, res) => {
@@ -223,14 +277,7 @@ router.delete('/eliminarPersonaje/:id', (req, res) => {
                     } else {
                         res.status(400).send({ message: "A ocurrido un error al eliminar el personaje" });
                     }
-                    // const connection = mysql.createConnection(dbConfig);
-                    // connection.query('DELETE FROM personajes WHERE idPersonaje = ?', [id], function (error, result) {
-                    //     if (error) {
-                    //         throw error;
-                    //     } else {
-                    //         res.send(result);
-                    //     }
-                    // })
+
                 } catch (error) {
 
                 }
