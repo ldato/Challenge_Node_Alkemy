@@ -45,7 +45,8 @@ router.use(bodyParser.json());
 router.get('/', async (req, res) => {
     let titulo = req.query.name;
     let genero = parseInt(req.query.genre);
-    let order = "ORDER BY a.titulo ASC";
+    let orderReq = req.query.order;
+    let order = orderReq===undefined?"":orderReq;
     let consulta = "";
     let parametros = [];
     let condicion = "";
@@ -89,7 +90,13 @@ router.get('/', async (req, res) => {
                         }
                         if ((req.query.name === undefined || req.query.name === "") && (req.query.genre === undefined || req.query.genre === "") && (req.query.order !== undefined || req.query.order !== "")) {
                             consulta = querySinCondicion;
-                            order ="ORDER BY a.titulo DESC"
+                            if (orderReq==="DESC") {
+                                order ="ORDER BY a.titulo DESC";
+                            } 
+                            if (orderReq==="ASC") {
+                                order ="ORDER BY a.titulo ASC";
+                            } 
+                            
                         }
                     }
                     let consultaFinal = consulta + order;
