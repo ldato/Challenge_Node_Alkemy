@@ -13,35 +13,7 @@ const query = util.promisify(connectionSQL.query).bind(connectionSQL); //para us
 router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
 
-//----------------------------------------ORIGINAL--------------------------------------------------------
-// router.get('/', (req, res) => {
-//     const token = req.headers['x-access-token'];
-//     if (!token) {
-//         res.status(401).send({ error: "Es necesario el token de autenticación" });
-//     } else {
-//         JWT.verify(token, secret, (error, user) => {
-//             if (error) {
-//                 return res.json({ message: "Token invalido" });
-//             } else {
-//                 try {
-//                     const connection = mysql.createConnection(dbConfig);
-//                     connection.query('SELECT imagen, titulo, fechaCreacion FROM peliculasseries;',
-//                         function (error, result) {
-//                             if (error) {
-//                                 throw error;
-//                             } else {
-//                                 console.log(result);
-//                                 res.send(result);
-//                             }
-//                         })
-//                 } catch (error) {
-//                     res.send(error);
-//                 }
-//             }
-//         })
-//     }
-// })
-//---------------------------------------------------------------------------------------------------------------
+
 router.get('/', async (req, res) => {
     let titulo = req.query.name;
     let genero = parseInt(req.query.genre);
@@ -163,6 +135,7 @@ router.get('/queryParameters/:titulo', async (req, res) => {
     res.send(response);
 
 })
+//--------------------------------------------------------------------------------------------------------------
 
 router.post('/crearPelicula', [multer.single('imagen')], (req, res) => {
     let file = req.file;

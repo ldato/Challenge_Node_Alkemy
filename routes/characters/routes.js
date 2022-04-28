@@ -13,31 +13,6 @@ const query = util.promisify(connectionSQL.query).bind(connectionSQL);
 router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
 
-//--------------------------------ORIGINAL--------------------------------------------------------------
-// router.get('/', (req, res) => {
-//     const token = req.headers['x-access-token'];
-//     if (!token) {
-//         res.status(401).send({ error: "Es necesario el token de autenticación" })
-//     } else {
-//         JWT.verify(token, secret, async (error, user) => {
-//             if (error) {
-//                 return res.json({ message: 'token invalido' });
-//             } else {
-//                 try {
-//                     const connection = mysql.createConnection(dbConfig);
-//                     connection.query('SELECT nombre, imagen FROM personajes', function (error, result) {
-//                         res.send(result);
-//                         console.log(result);
-//                     })
-//                 } catch (error) {
-//                     res.send(error);
-//                     console.log(error);
-//                 }
-//             }
-//         })
-//     }
-// })
-//----------------------------------------------------------------------------------------------------------
 
 router.get('/', (req, res) => {
     let nombre = req.query.name;
@@ -137,6 +112,7 @@ router.get('/queryParameters/:nombre', async (req, res) => {
 
     console.log(consultaFinal, parametros);
 })
+//---------------------------------------------------------------------------------------------------------------
 
 
 router.get('/detallePersonaje/:id', (req, res) => {
